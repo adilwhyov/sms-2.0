@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мессенджер</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        h1, h2 {
+            margin-bottom: 20px;
+        }
+        #messages {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        #messages li {
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #e9ecef;
+        }
+        .form-control {
+            margin-bottom: 10px;
+        }
+        .btn {
+            width: 100%;
+        }
+        .friend-item {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center">Мессенджер</h1>
+        <div id="user-info" class="text-right mb-3">
+            <p id="user-email" class="d-inline"></p>
+            <button id="logout" class="btn btn-danger" style="display:none;">Выйти</button>
+        </div>
+        
+        <h2>Добавить друга</h2>
+        <form id="add-friend-form" class="mb-3">
+            <input type="email" id="friend-email" class="form-control" placeholder="Email друга" required />
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+        <ul id="friend-list" class="list-group mb-3"></ul>
+
+        <h2>Чат</h2>
+        <div id="chat-container" style="display:none;">
+            <ul id="messages" class="list-group"></ul>
+            <form id="message-form" class="mb-3">
+                <input id="message" class="form-control" placeholder="Введите сообщение..." required />
+                <button class="btn btn-primary" type="submit">Отправить</button>
+            </form>
+        </div>
+
+        <h2>Аутентификация</h2>
+        <form id="login-form" class="mb-3">
+            <input type="email" id="email" class="form-control" placeholder="Email" required />
+            <input type="password" id="password" class="form-control" placeholder="Пароль" required />
+            <button type="submit" class="btn btn-primary">Войти</button>
+        </form>
+        
+        <form id="register-form" class="mb-3">
+            <input type="email" id="reg-email" class="form-control" placeholder="Email" required />
+            <input type="password" id="reg-password" class="form-control" placeholder="Пароль" required />
+            <button type="submit" class="btn btn-success">Зарегистрироваться</button>
+        </form>
+
+        <h2>Аутентификация по номеру телефона</h2>
+        <form id="phone-form" class="mb-3">
+            <input type="tel" id="phone-number" class="form-control" placeholder="Введите номер телефона" required />
+            <button type="submit" class="btn btn-primary">Получить код</button>
+        </form>
+        <div id="recaptcha-container"></div>
+        <form id="verification-code-form" style="display:none;">
+            <input type="text" id="verification-code" class="form-control" placeholder="Введите код подтверждения" required />
+            <button type="submit" class="btn btn-success">Подтвердить</button>
+        </form>
+    </div>
+
+    <script type="module">
+        // Импорт необходимых функций из SDK Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+        import { getDatabase, ref, onChildAdded, push } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+
+        // Конфигурация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCC3RzyblsZTeFM1Qy_60FZ6ZjdasfD2yQ",
+            authDomain: "adilwhyov.firebaseapp.com",
+            databaseURL: "https://adilwhyov-default-rtdb.firebaseio.com",
+            projectId: "adilwhyov",
+            storageBucket: "adilwhyov.appspot.com",
+            messagingSenderId: "780959026674",
+            appId: "1:780959026674:web:26c947984611ecde68af6b",
+            measurementId: "G-HZE48K1GBC"
+        };
+
+        // Инициализация Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const database = getDatabase();
+
+        const userEmail = document.getElementById('user-email');
+        const messageForm = document.getElementById('message-form');
+        const chatContainer = document.getElementById('chat-container');
+        const logoutButton = document.getElementById('logout');
+        const friendsRef = ref(database, 'friends');
+        
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userEmail.textContent = `Вход: ${user.email || user.phoneNumber}`;
+                logoutButton.style.display = 'block';
+                loadFriends();
+                chatContainer.style.display = 'block';
+            } else {
+                chatContainer.style.display = 'none';
+                userEmail.textContent = '';
+                logoutButton.style.display = 'none';
+            }
+        });
+
+        // Регистрация пользователя
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    alert("Регистрация успешна!");
+                })
+                .catch((error) => {
+                    alert("Ошибка регистрации: " + error.message);
+                });
+        });
+
+        // Вход пользователя
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    alert("Вход успешен!");
+                })
+                .catch((error) => {
+                    alert("Ошибка входа: " + error.message);
+                });
+        });
+
+        // Аутентификация по номеру телефона
+        document.getElementById('phone-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const phoneNumber = document.getElementById('phone-number').value;
+            const appVerifier = new RecaptchaVerifier('recaptcha-container', {
+                'size': 'invisible' // или 'normal' для видимой reCAPTCHA
+            }, auth);
+            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+                .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    document.getElementById('verification-code-form').style.display = 'block';
+                    document.getElementById('phone-form').style.display = 'none';
+                }).catch((error) => {
+                    alert("Ошибка при отправке кода: " + error.message);
+                });
+        });
+
+        document.getElementById('verification-code-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const code = document.getElementById('verification-code').value;
+            confirmationResult.confirm(code).then((result) => {
+                const user = result.user;
+                alert("Аутентификация успешна: " + user.phoneNumber);
+            }).catch((error) => {
+                alert("Ошибка при подтверждении кода: " + error.message);
+            });
+        });
+
+        logoutButton.addEventListener('click', () => {
+            signOut(auth)
+                .then(() => {
+                    alert("Вы вышли из учетной записи.");
+                    chatContainer.style.display = 'none';
+                });
+        });
+
+        // Добавление друга
+        document.getElementById('add-friend-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const friendEmail = document.getElementById('friend-email').value;
+            push(friendsRef, { email: friendEmail });
+            document.getElementById('friend-email').value = '';
+        });
+
+        function loadFriends() {
+            const friendList = document.getElementById('friend-list');
+            friendList.innerHTML = '';
+
+            onChildAdded(friendsRef, (data) => {
+                const friend = data.val();
+                const friendItem = document.createElement('li');
+                friendItem.className = 'list-group-item friend-item';
+                friendItem.textContent = friend.email;
+                friendItem.onclick = () => openChat(friend.email);
+                friendList.appendChild(friendItem);
+            });
+        }
+
+        function openChat(friendEmail) {
+            const messages = document.getElementById('messages');
+            messages.innerHTML = ''; // Очистка сообщений при открытии чата
+
+            const friendMessagesRef = ref(database, 'messages/' + friendEmail + '/' + auth.currentUser.email);
+
+            onChildAdded(friendMessagesRef, (data) => {
+                const message = data.val();
+                const messageItem = document.createElement('li');
+                messageItem.textContent = message.text;
+                messages.appendChild(messageItem);
+            });
+
+            messageForm.onsubmit = (e) => {
+                e.preventDefault();
+                const messageText = document.getElementById('message').value;
+                push(friendMessagesRef, { text: messageText });
+                document.getElementById('message').value = ''; // Очистка поля ввода
+            };
+        }
+    </script>
+</body>
+</html>
