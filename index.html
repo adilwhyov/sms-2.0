@@ -9,7 +9,6 @@
         body {
             font-family: Arial, sans-serif;
             background-color: #f8f9fa;
-            color: #343a40;
         }
         h1, h2 {
             margin-bottom: 20px;
@@ -21,10 +20,9 @@
             background: #fff;
             border-radius: 5px;
             border: 1px solid #ccc;
-            padding: 10px;
         }
         #messages li {
-            margin: 5px 0;
+            margin: 5px;
             padding: 10px;
             border-radius: 5px;
             background: #e9ecef;
@@ -37,20 +35,6 @@
         }
         .friend-item {
             cursor: pointer;
-            background: #e9ecef;
-            margin: 5px 0;
-            padding: 10px;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-        .friend-item:hover {
-            background: #d4d4d4;
-        }
-        .chat-header {
-            background: #007bff;
-            color: #fff;
-            padding: 10px;
-            border-radius: 5px 5px 0 0;
         }
     </style>
 </head>
@@ -61,7 +45,7 @@
             <p id="user-email" class="d-inline"></p>
             <button id="logout" class="btn btn-danger" style="display:none;">Выйти</button>
         </div>
-
+        
         <h2>Добавить друга</h2>
         <form id="add-friend-form" class="mb-3">
             <input type="email" id="friend-email" class="form-control" placeholder="Email друга" required />
@@ -71,9 +55,6 @@
 
         <h2>Чат</h2>
         <div id="chat-container" style="display:none;">
-            <div class="chat-header">
-                <h4 id="chat-title" class="m-0">Чат с: <span id="friend-name"></span></h4>
-            </div>
             <ul id="messages" class="list-group"></ul>
             <form id="message-form" class="mb-3">
                 <input id="message" class="form-control" placeholder="Введите сообщение..." required />
@@ -87,7 +68,7 @@
             <input type="password" id="password" class="form-control" placeholder="Пароль" required />
             <button type="submit" class="btn btn-primary">Войти</button>
         </form>
-
+        
         <form id="register-form" class="mb-3">
             <input type="email" id="reg-email" class="form-control" placeholder="Email" required />
             <input type="password" id="reg-password" class="form-control" placeholder="Пароль" required />
@@ -179,13 +160,20 @@
                 });
         });
 
-        // Аутентификация по номеру телефона
+        // Настройка reCAPTCHA
+        let appVerifier;
         document.getElementById('phone-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const phoneNumber = document.getElementById('phone-number').value;
-            const appVerifier = new RecaptchaVerifier('recaptcha-container', {
-                'size': 'invisible' // 'normal' для видимой капчи
-            }, auth);
+
+            // Проверяем, инициализирована ли reCAPTCHA
+            if (!appVerifier) {
+                appVerifier = new RecaptchaVerifier('recaptcha-container', {
+                    'size': 'invisible', // или 'normal' для видимой reCAPTCHA
+                }, auth);
+            }
+
+            // Запрос на отправку SMS кода
             signInWithPhoneNumber(auth, phoneNumber, appVerifier)
                 .then((confirmationResult) => {
                     window.confirmationResult = confirmationResult;
@@ -199,4 +187,56 @@
         document.getElementById('verification-code-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const code = document.getElementById('verification-code').value;
-            confirmationResult.confirm(code).
+            confirmationResult.confirm(code).then((result) => {
+                const user = result.user;
+                alert("Аутентификация успешна: " + user.phoneNumber);
+                chatContainer.style.display = 'block';
+            }).catch((error) => {
+                alert("Ошибка при подтверждении кода: " + error.message);
+            });
+        });
+
+        logoutButton.addEventListener('click', () => {
+            signOut(auth).then(() => {
+                alert("Вы вышли из системы.");
+            }).catch((error) => {
+                alert("Ошибка при выходе: " + error.message);
+            });
+        });
+
+        function loadFriends() {
+            onChildAdded(friendsRef, (data) => {
+                const friendEmail = data.val();
+                const li = document.createElement('li');
+                li.textContent = friendEmail;
+                document.getElementById('friend-list').appendChild(li);
+            });
+        }
+
+        document.getElementById('add-friend-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const friendEmail = document.getElementById('friend-email').value;
+            push(friendsRef, friendEmail);
+            document.getElementById('friend-email').value = '';
+        });
+
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = document.getElementById('message').value;
+            push(messagesRef, {
+                sender: auth.currentUser.email,
+                message: message,
+                timestamp: Date.now()
+            });
+            document.getElementById('message').value = '';
+        });
+
+        onChildAdded(messagesRef, (data) => {
+            const messageData = data.val();
+            const li = document.createElement('li');
+            li.textContent = `${messageData.sender}: ${messageData.message}`;
+            document.getElementById('messages').appendChild(li);
+        });
+    </script>
+</body>
+</html>
