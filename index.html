@@ -88,13 +88,10 @@
     </div>
 
     <script type="module">
-        // Импорт необходимых функций из SDK Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-analytics.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-        import { getDatabase, ref, onChildAdded, push } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+        import { getDatabase, ref, onChildAdded, push, set } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
-        // Конфигурация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCC3RzyblsZTeFM1Qy_60FZ6ZjdasfD2yQ",
             authDomain: "adilwhyov.firebaseapp.com",
@@ -106,9 +103,7 @@
             measurementId: "G-HZE48K1GBC"
         };
 
-        // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const auth = getAuth();
         const database = getDatabase();
 
@@ -124,6 +119,7 @@
                 userEmail.textContent = `Вход: ${user.email || user.phoneNumber}`;
                 logoutButton.style.display = 'block';
                 loadFriends();
+                chatContainer.style.display = 'block';
             } else {
                 chatContainer.style.display = 'none';
                 userEmail.textContent = '';
@@ -131,7 +127,6 @@
             }
         });
 
-        // Регистрация пользователя
         document.getElementById('register-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('reg-email').value;
@@ -145,7 +140,6 @@
                 });
         });
 
-        // Вход пользователя
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -153,27 +147,18 @@
             signInWithEmailAndPassword(auth, email, password)
                 .then(() => {
                     alert("Вход успешен!");
-                    chatContainer.style.display = 'block';
                 })
                 .catch((error) => {
                     alert("Ошибка входа: " + error.message);
                 });
         });
 
-        // Настройка reCAPTCHA
-        let appVerifier;
         document.getElementById('phone-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const phoneNumber = document.getElementById('phone-number').value;
-
-            // Проверяем, инициализирована ли reCAPTCHA
-            if (!appVerifier) {
-                appVerifier = new RecaptchaVerifier('recaptcha-container', {
-                    'size': 'invisible', // или 'normal' для видимой reCAPTCHA
-                }, auth);
-            }
-
-            // Запрос на отправку SMS кода
+            const appVerifier = new RecaptchaVerifier('recaptcha-container', {
+                'size': 'invisible' // или 'normal' для видимой reCAPTCHA
+            }, auth);
             signInWithPhoneNumber(auth, phoneNumber, appVerifier)
                 .then((confirmationResult) => {
                     window.confirmationResult = confirmationResult;
@@ -190,53 +175,26 @@
             confirmationResult.confirm(code).then((result) => {
                 const user = result.user;
                 alert("Аутентификация успешна: " + user.phoneNumber);
-                chatContainer.style.display = 'block';
             }).catch((error) => {
                 alert("Ошибка при подтверждении кода: " + error.message);
             });
         });
 
         logoutButton.addEventListener('click', () => {
-            signOut(auth).then(() => {
-                alert("Вы вышли из системы.");
-            }).catch((error) => {
-                alert("Ошибка при выходе: " + error.message);
-            });
+            signOut(auth)
+                .then(() => {
+                    alert("Вы вышли из учетной записи.");
+                });
         });
-
-        function loadFriends() {
-            onChildAdded(friendsRef, (data) => {
-                const friendEmail = data.val();
-                const li = document.createElement('li');
-                li.textContent = friendEmail;
-                document.getElementById('friend-list').appendChild(li);
-            });
-        }
 
         document.getElementById('add-friend-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const friendEmail = document.getElementById('friend-email').value;
-            push(friendsRef, friendEmail);
+            push(friendsRef, { email: friendEmail });
             document.getElementById('friend-email').value = '';
+            loadFriends();
         });
 
-        messageForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const message = document.getElementById('message').value;
-            push(messagesRef, {
-                sender: auth.currentUser.email,
-                message: message,
-                timestamp: Date.now()
-            });
-            document.getElementById('message').value = '';
-        });
-
-        onChildAdded(messagesRef, (data) => {
-            const messageData = data.val();
-            const li = document.createElement('li');
-            li.textContent = `${messageData.sender}: ${messageData.message}`;
-            document.getElementById('messages').appendChild(li);
-        });
-    </script>
-</body>
-</html>
+        function loadFriends() {
+            const friendList = document.getElementById('friend-list');
+            friendList.innerHTML = ''; //
