@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мессенджер</title>
+    <title>РњРµСЃСЃРµРЅРґР¶РµСЂ</title>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-analytics.js";
@@ -11,7 +11,7 @@
         import { getDatabase, ref, onChildAdded, push, set } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
         const firebaseConfig = {
-            // Ваша конфигурация
+            // Р’Р°С€Р° РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ
         };
 
         const app = initializeApp(firebaseConfig);
@@ -31,7 +31,7 @@
         onAuthStateChanged(auth, user => {
             if (user) {
                 currentUser = user;
-                userEmail.textContent = `Вход: ${user.email || user.phoneNumber}`;
+                userEmail.textContent = `Р’С…РѕРґ: ${user.email || user.phoneNumber}`;
                 loadChats();
             } else {
                 userEmail.textContent = '';
@@ -40,7 +40,7 @@
             }
         });
 
-        // Загрузка чатов
+        // Р—Р°РіСЂСѓР·РєР° С‡Р°С‚РѕРІ
         function loadChats() {
             const chatsRef = ref(database, `users/${currentUser.uid}/chats`);
             chatList.innerHTML = '';
@@ -55,7 +55,7 @@
             });
         }
 
-        // Загрузка сообщений для выбранного чата
+        // Р—Р°РіСЂСѓР·РєР° СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕРіРѕ С‡Р°С‚Р°
         function loadMessages(chatId) {
             currentChatId = chatId;
             messagesList.innerHTML = '';
@@ -74,27 +74,27 @@
                 const message = messageInput.value;
                 const timestamp = new Date().toLocaleString();
 
-                // Сохранение сообщения в выбранном чате
+                // РЎРѕС…СЂР°РЅРµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РІС‹Р±СЂР°РЅРЅРѕРј С‡Р°С‚Рµ
                 push(ref(database, `chats/${chatId}/messages`), { user: currentUser.email || currentUser.phoneNumber, text: message, timestamp });
 
-                // Обновление списка чатов с последним сообщением
+                // РћР±РЅРѕРІР»РµРЅРёРµ СЃРїРёСЃРєР° С‡Р°С‚РѕРІ СЃ РїРѕСЃР»РµРґРЅРёРј СЃРѕРѕР±С‰РµРЅРёРµРј
                 updateChatTimestamp(chatId, message);
 
                 messageInput.value = '';
             };
         }
 
-        // Обновление времени последнего сообщения в чате
+        // РћР±РЅРѕРІР»РµРЅРёРµ РІСЂРµРјРµРЅРё РїРѕСЃР»РµРґРЅРµРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ РІ С‡Р°С‚Рµ
         function updateChatTimestamp(chatId, message) {
             const chatRef = ref(database, `users/${currentUser.uid}/chats/${chatId}`);
             set(chatRef, {
-                name: chatId.split('_')[1],  // Имя чата (номер телефона или имя друга)
+                name: chatId.split('_')[1],  // РРјСЏ С‡Р°С‚Р° (РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР° РёР»Рё РёРјСЏ РґСЂСѓРіР°)
                 lastMessage: message,
                 lastTimestamp: new Date().toLocaleString()
             });
         }
 
-        // Добавление друга
+        // Р”РѕР±Р°РІР»РµРЅРёРµ РґСЂСѓРіР°
         addFriendForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const friendPhone = document.getElementById('friend-phone').value;
@@ -104,7 +104,7 @@
             loadChats();
         });
 
-        // Аутентификация и регистрация - не изменились
+        // РђСѓС‚РµРЅС‚РёС„РёРєР°С†РёСЏ Рё СЂРµРіРёСЃС‚СЂР°С†РёСЏ - РЅРµ РёР·РјРµРЅРёР»РёСЃСЊ
     </script>
     <style>
         body {
@@ -162,44 +162,44 @@
 <body>
     <div id="user-info">
         <p id="user-email"></p>
-        <button id="logout">Выйти</button>
+        <button id="logout">Р’С‹Р№С‚Рё</button>
     </div>
 
-    <h2>Чаты</h2>
+    <h2>Р§Р°С‚С‹</h2>
     <ul id="chat-list"></ul>
     <form id="add-friend-form">
-        <input type="tel" id="friend-phone" placeholder="Введите номер телефона" required />
-        <button type="submit">Добавить друга</button>
+        <input type="tel" id="friend-phone" placeholder="Р’РІРµРґРёС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°" required />
+        <button type="submit">Р”РѕР±Р°РІРёС‚СЊ РґСЂСѓРіР°</button>
     </form>
 
-    <h2>Сообщения</h2>
+    <h2>РЎРѕРѕР±С‰РµРЅРёСЏ</h2>
     <ul id="messages"></ul>
     <form id="message-form">
-        <input id="message" autocomplete="off" placeholder="Введите сообщение..." required />
-        <button type="submit">Отправить</button>
+        <input id="message" autocomplete="off" placeholder="Р’РІРµРґРёС‚Рµ СЃРѕРѕР±С‰РµРЅРёРµ..." required />
+        <button type="submit">РћС‚РїСЂР°РІРёС‚СЊ</button>
     </form>
 
     <form id="login-form">
         <input type="email" id="email" placeholder="Email" required />
-        <input type="password" id="password" placeholder="Пароль" required />
-        <button type="submit">Войти</button>
+        <input type="password" id="password" placeholder="РџР°СЂРѕР»СЊ" required />
+        <button type="submit">Р’РѕР№С‚Рё</button>
     </form>
     
     <form id="register-form">
         <input type="email" id="reg-email" placeholder="Email" required />
-        <input type="password" id="reg-password" placeholder="Пароль" required />
-        <button type="submit">Зарегистрироваться</button>
+        <input type="password" id="reg-password" placeholder="РџР°СЂРѕР»СЊ" required />
+        <button type="submit">Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊСЃСЏ</button>
     </form>
 
-    <h2>Аутентификация по номеру телефона</h2>
+    <h2>РђСѓС‚РµРЅС‚РёС„РёРєР°С†РёСЏ РїРѕ РЅРѕРјРµСЂСѓ С‚РµР»РµС„РѕРЅР°</h2>
     <form id="phone-form">
-        <input type="tel" id="phone-number" placeholder="Введите номер телефона" required />
-        <button type="submit">Получить код</button>
+        <input type="tel" id="phone-number" placeholder="Р’РІРµРґРёС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°" required />
+        <button type="submit">РџРѕР»СѓС‡РёС‚СЊ РєРѕРґ</button>
     </form>
     <div id="recaptcha-container"></div>
     <form id="verification-code-form" style="display:none;">
-        <input type="text" id="verification-code" placeholder="Введите код подтверждения" required />
-        <button type="submit">Подтвердить</button>
+        <input type="text" id="verification-code" placeholder="Р’РІРµРґРёС‚Рµ РєРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ" required />
+        <button type="submit">РџРѕРґС‚РІРµСЂРґРёС‚СЊ</button>
     </form>
 </body>
 </html>
