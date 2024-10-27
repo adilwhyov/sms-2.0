@@ -199,6 +199,7 @@
 
                 push(messagesRef, { text: message, sender: auth.currentUser.email });
                 messageInput.value = '';
+                console.log("Сообщение отправлено:", message); // Отладочное сообщение
             } else {
                 alert("Сначала выберите друга для чата.");
             }
@@ -214,6 +215,7 @@
                 const li = document.createElement('li');
                 li.textContent = `${message.sender}: ${message.text}`;
                 messagesList.appendChild(li);
+                console.log("Сообщение загружено:", message); // Отладочное сообщение
             });
         }
 
