@@ -156,46 +156,19 @@
                 });
         });
 
-        document.getElementById('phone-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const phoneNumber = document.getElementById('phone-number').value;
-            const appVerifier = new RecaptchaVerifier('recaptcha-container', {
-                'size': 'invisible'
-            }, auth);
-            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
-                .then((confirmationResult) => {
-                    window.confirmationResult = confirmationResult;
-                    document.getElementById('verification-code-form').style.display = 'block';
-                    document.getElementById('phone-form').style.display = 'none';
-                }).catch((error) => {
-                    alert("Ошибка при отправке кода: " + error.message);
-                });
-        });
-
-        document.getElementById('verification-code-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const code = document.getElementById('verification-code').value;
-            window.confirmationResult.confirm(code).then((result) => {
-                const user = result.user;
-                alert("Аутентификация успешна: " + user.phoneNumber);
-                chatContainer.style.display = 'block';
-            }).catch((error) => {
-                alert("Ошибка при подтверждении кода: " + error.message);
-            });
-        });
-
         logoutButton.addEventListener('click', () => {
-            signOut(auth)
-                .then(() => {
-                    alert("Вы вышли из учетной записи.");
-                    chatContainer.style.display = 'none';
-                });
+            signOut(auth).then(() => {
+                alert("Вы вышли из системы.");
+            }).catch((error) => {
+                alert("Ошибка выхода: " + error.message);
+            });
         });
 
         document.getElementById('add-friend-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const friendEmail = document.getElementById('friend-email').value;
-            push(ref(database, 'friends/' + auth.currentUser.uid), { email: friendEmail });
+            const friendsRef = ref(database, 'friends/' + auth.currentUser.uid);
+            push(friendsRef, { email: friendEmail });
             document.getElementById('friend-email').value = '';
         });
 
@@ -208,7 +181,7 @@
                 li.className = 'list-group-item friend-item';
                 li.textContent = friend.email;
                 li.addEventListener('click', () => {
-                    currentFriendEmail = friend.email;
+                    currentFriendEmail = friend.email.replace(/\./g, '_'); // Заменяем '.' на '_'
                     chatContainer.style.display = 'block';
                     loadChatMessages();
                 });
@@ -221,7 +194,7 @@
             const messageInput = document.getElementById('message');
             const message = messageInput.value;
             if (currentFriendEmail) {
-                const messagesRef = ref(database, `messages/${currentFriendEmail}`);
+                const messagesRef = ref(database, `messages/${currentFriendEmail}`); // Используем безопасный путь
                 push(messagesRef, { text: message, sender: auth.currentUser.email });
                 messageInput.value = '';
             } else {
@@ -231,7 +204,7 @@
 
         function loadChatMessages() {
             messagesList.innerHTML = ''; // Очищаем список перед добавлением
-            const messagesRef = ref(database, `messages/${currentFriendEmail}`);
+            const messagesRef = ref(database, `messages/${currentFriendEmail}`); // Используем безопасный путь
             onChildAdded(messagesRef, (data) => {
                 const message = data.val();
                 const li = document.createElement('li');
@@ -239,6 +212,35 @@
                 messagesList.appendChild(li);
             });
         }
+
+        // Обработка аутентификации по номеру телефона
+        const appVerifier = new RecaptchaVerifier('recaptcha-container', {
+            'size': 'invisible', // 'normal' для видимой капчи
+        }, auth);
+
+        document.getElementById('phone-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const phoneNumber = document.getElementById('phone-number').value;
+            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+                .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    document.getElementById('verification-code-form').style.display = 'block';
+                })
+                .catch((error) => {
+                    alert("Ошибка при отправке кода: " + error.message);
+                });
+        });
+
+        document.getElementById('verification-code-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const verificationCode = document.getElementById('verification-code').value;
+            window.confirmationResult.confirm(verificationCode).then((result) => {
+                const user = result.user;
+                alert("Успешная аутентификация по номеру телефона!");
+            }).catch((error) => {
+                alert("Ошибка подтверждения кода: " + error.message);
+            });
+        });
     </script>
 </body>
 </html>
