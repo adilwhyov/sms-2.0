@@ -123,23 +123,10 @@
                 loadFriends();
                 chatContainer.style.display = 'none'; // Скрыть чат при входе
             } else {
-                chatContainer.style.display = 'none';
+                chatContainer.style.display = 'none'; // Скрыть чат при выходе
                 userEmail.textContent = '';
                 logoutButton.style.display = 'none';
             }
-        });
-
-        document.getElementById('register-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            createUserWithEmailAndPassword(auth, email, password)
-                .then(() => {
-                    alert("Регистрация успешна!");
-                })
-                .catch((error) => {
-                    alert("Ошибка регистрации: " + error.message);
-                });
         });
 
         document.getElementById('login-form').addEventListener('submit', (e) => {
@@ -148,11 +135,23 @@
             const password = document.getElementById('password').value;
             signInWithEmailAndPassword(auth, email, password)
                 .then(() => {
-                    alert("Вход успешен!");
-                    chatContainer.style.display = 'block';
+                    alert("Успешный вход!");
                 })
                 .catch((error) => {
                     alert("Ошибка входа: " + error.message);
+                });
+        });
+
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    alert("Успешная регистрация!");
+                })
+                .catch((error) => {
+                    alert("Ошибка регистрации: " + error.message);
                 });
         });
 
@@ -193,8 +192,11 @@
             e.preventDefault();
             const messageInput = document.getElementById('message');
             const message = messageInput.value;
+
             if (currentFriendEmail) {
-                const messagesRef = ref(database, `messages/${currentFriendEmail}`); // Используем безопасный путь
+                const chatId = getChatId(auth.currentUser.email, currentFriendEmail);
+                const messagesRef = ref(database, `messages/${chatId}`);
+
                 push(messagesRef, { text: message, sender: auth.currentUser.email });
                 messageInput.value = '';
             } else {
@@ -204,13 +206,20 @@
 
         function loadChatMessages() {
             messagesList.innerHTML = ''; // Очищаем список перед добавлением
-            const messagesRef = ref(database, `messages/${currentFriendEmail}`); // Используем безопасный путь
+            const chatId = getChatId(auth.currentUser.email, currentFriendEmail); // Получаем уникальный идентификатор
+            const messagesRef = ref(database, `messages/${chatId}`);
+
             onChildAdded(messagesRef, (data) => {
                 const message = data.val();
                 const li = document.createElement('li');
                 li.textContent = `${message.sender}: ${message.text}`;
                 messagesList.appendChild(li);
             });
+        }
+
+        function getChatId(email1, email2) {
+            const sortedEmails = [email1, email2].sort();
+            return `${sortedEmails[0]}_${sortedEmails[1]}`.replace(/\./g, '_'); // заменяем '.' на '_'
         }
 
         // Обработка аутентификации по номеру телефона
