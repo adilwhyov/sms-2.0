@@ -164,13 +164,20 @@
         document.getElementById('phone-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const phoneNumber = document.getElementById('phone-number').value;
-            const appVerifier = new RecaptchaVerifier('recaptcha-container', {}, auth);
+
+            // Настройка reCAPTCHA
+            const appVerifier = new RecaptchaVerifier('recaptcha-container', {
+                'size': 'invisible' // или 'normal' для видимой reCAPTCHA
+            }, auth);
+
+            // Запрос на отправку SMS кода
             signInWithPhoneNumber(auth, phoneNumber, appVerifier)
                 .then((confirmationResult) => {
                     window.confirmationResult = confirmationResult;
                     document.getElementById('verification-code-form').style.display = 'block';
                     document.getElementById('phone-form').style.display = 'none';
-                }).catch((error) => {
+                })
+                .catch((error) => {
                     alert("Ошибка при отправке кода: " + error.message);
                 });
         });
@@ -201,52 +208,44 @@
             const friendEmail = document.getElementById('friend-email').value;
             push(friendsRef, { email: friendEmail });
             document.getElementById('friend-email').value = '';
-            loadFriends();
         });
 
-        // Загрузка друзей
         function loadFriends() {
-            const friendList = document.getElementById('friend-list');
-            friendList.innerHTML = ''; // Очистить список друзей
             onChildAdded(friendsRef, (data) => {
                 const friend = data.val();
                 const li = document.createElement('li');
-                li.classList.add('list-group-item', 'friend-item');
+                li.classList.add('friend-item', 'list-group-item');
                 li.textContent = friend.email;
-                li.onclick = () => startChat(friend.email);
-                friendList.appendChild(li);
+                li.addEventListener('click', () => {
+                    loadMessages(friend.email);
+                });
+                document.getElementById('friend-list').appendChild(li);
             });
         }
 
-        // Начать чат с другом
-        function startChat(friendEmail) {
-            chatContainer.style.display = 'block';
-            loadMessages(friendEmail);
-        }
-
-        // Загрузка сообщений
         function loadMessages(friendEmail) {
-            const messagesList = document.getElementById('messages');
-            messagesList.innerHTML = ''; // Очистить старые сообщения
-            onChildAdded(ref(database, 'messages/' + friendEmail), (data) => {
+            document.getElementById('messages').innerHTML = '';
+            const friendMessagesRef = ref(database, `messages/${friendEmail}`);
+
+            onChildAdded(friendMessagesRef, (data) => {
                 const message = data.val();
                 const li = document.createElement('li');
-                li.textContent = message;
-                messagesList.appendChild(li);
+                li.textContent = message.text;
+                document.getElementById('messages').appendChild(li);
             });
 
-            // Отправка сообщения
-            messageForm.onsubmit = (e) => {
+            messageForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const messageInput = document.getElementById('message');
-                const message = messageInput.value;
-                const user = auth.currentUser;
-                if (user) {
-                    push(ref(database, 'messages/' + friendEmail), `${user.email || user.phoneNumber}: ${message}`);
-                    messageInput.value = '';
-                }
-            };
+                const messageText = document.getElementById('message').value;
+                push(ref(database, `messages/${friendEmail}`), { text: messageText });
+                document.getElementById('message').value = '';
+            });
+
+            chatContainer.style.display = 'block';
         }
     </script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
 </body>
 </html>
