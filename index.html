@@ -20,7 +20,7 @@
             background: #fff;
             border-radius: 5px;
             border: 1px solid #ccc;
-            padding: 10px; /* Отступ внутри блока сообщений */
+            padding: 10px;
         }
         #messages li {
             margin: 5px;
@@ -112,7 +112,8 @@
         const messageForm = document.getElementById('message-form');
         const chatContainer = document.getElementById('chat-container');
         const logoutButton = document.getElementById('logout');
-        const friendsRef = ref(database, 'friends');
+        const friendList = document.getElementById('friend-list');
+        const messagesList = document.getElementById('messages');
         let currentFriendEmail = '';
 
         onAuthStateChanged(auth, user => {
@@ -194,14 +195,13 @@
         document.getElementById('add-friend-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const friendEmail = document.getElementById('friend-email').value;
-            push(friendsRef, { email: friendEmail });
+            push(ref(database, 'friends/' + auth.currentUser.uid), { email: friendEmail });
             document.getElementById('friend-email').value = '';
-            loadFriends();
         });
 
         function loadFriends() {
-            const friendsList = document.getElementById('friend-list');
-            friendsList.innerHTML = ''; // Очищаем список перед добавлением
+            friendList.innerHTML = ''; // Очищаем список перед добавлением
+            const friendsRef = ref(database, 'friends/' + auth.currentUser.uid);
             onChildAdded(friendsRef, (data) => {
                 const friend = data.val();
                 const li = document.createElement('li');
@@ -212,7 +212,7 @@
                     chatContainer.style.display = 'block';
                     loadChatMessages();
                 });
-                friendsList.appendChild(li);
+                friendList.appendChild(li);
             });
         }
 
@@ -230,7 +230,6 @@
         });
 
         function loadChatMessages() {
-            const messagesList = document.getElementById('messages');
             messagesList.innerHTML = ''; // Очищаем список перед добавлением
             const messagesRef = ref(database, `messages/${currentFriendEmail}`);
             onChildAdded(messagesRef, (data) => {
