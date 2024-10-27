@@ -4,202 +4,219 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мессенджер</title>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-analytics.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-        import { getDatabase, ref, onChildAdded, push, set } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-
-        const firebaseConfig = {
-            // Ваша конфигурация
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const auth = getAuth();
-        const database = getDatabase();
-
-        let currentUser;
-        let currentChatId = null;
-
-        const userEmail = document.getElementById('user-email');
-        const chatList = document.getElementById('chat-list');
-        const messageForm = document.getElementById('message-form');
-        const messagesList = document.getElementById('messages');
-        const addFriendForm = document.getElementById('add-friend-form');
-
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                currentUser = user;
-                userEmail.textContent = `Вход: ${user.email || user.phoneNumber}`;
-                loadChats();
-            } else {
-                userEmail.textContent = '';
-                chatList.innerHTML = '';
-                messagesList.innerHTML = '';
-            }
-        });
-
-        // Загрузка чатов
-        function loadChats() {
-            const chatsRef = ref(database, `users/${currentUser.uid}/chats`);
-            chatList.innerHTML = '';
-
-            onChildAdded(chatsRef, (data) => {
-                const chatId = data.key;
-                const chatName = data.val().name;
-                const chatItem = document.createElement('li');
-                chatItem.textContent = chatName;
-                chatItem.onclick = () => loadMessages(chatId);
-                chatList.appendChild(chatItem);
-            });
-        }
-
-        // Загрузка сообщений для выбранного чата
-        function loadMessages(chatId) {
-            currentChatId = chatId;
-            messagesList.innerHTML = '';
-            const messagesRef = ref(database, `chats/${chatId}/messages`);
-
-            onChildAdded(messagesRef, (data) => {
-                const messageData = data.val();
-                const li = document.createElement('li');
-                li.textContent = `${messageData.timestamp} - ${messageData.user}: ${messageData.text}`;
-                messagesList.appendChild(li);
-            });
-
-            messageForm.onsubmit = (e) => {
-                e.preventDefault();
-                const messageInput = document.getElementById('message');
-                const message = messageInput.value;
-                const timestamp = new Date().toLocaleString();
-
-                // Сохранение сообщения в выбранном чате
-                push(ref(database, `chats/${chatId}/messages`), { user: currentUser.email || currentUser.phoneNumber, text: message, timestamp });
-
-                // Обновление списка чатов с последним сообщением
-                updateChatTimestamp(chatId, message);
-
-                messageInput.value = '';
-            };
-        }
-
-        // Обновление времени последнего сообщения в чате
-        function updateChatTimestamp(chatId, message) {
-            const chatRef = ref(database, `users/${currentUser.uid}/chats/${chatId}`);
-            set(chatRef, {
-                name: chatId.split('_')[1],  // Имя чата (номер телефона или имя друга)
-                lastMessage: message,
-                lastTimestamp: new Date().toLocaleString()
-            });
-        }
-
-        // Добавление друга
-        addFriendForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const friendPhone = document.getElementById('friend-phone').value;
-            const chatId = `${currentUser.uid}_${friendPhone}`;
-            set(ref(database, `users/${currentUser.uid}/chats/${chatId}`), { name: friendPhone });
-            document.getElementById('friend-phone').value = '';
-            loadChats();
-        });
-
-        // Аутентификация и регистрация - не изменились
-    </script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            margin: 0;
+            background-color: #f8f9fa;
         }
-        #user-info {
-            background: #0088cc;
-            color: white;
-            padding: 10px;
-            text-align: center;
-        }
-        #chat-list {
-            list-style: none;
-            padding: 0;
-            overflow-y: auto;
-            height: 200px;
-        }
-        #chat-list li {
-            padding: 10px;
-            cursor: pointer;
-            border-bottom: 1px solid #ccc;
+        h1, h2 {
+            margin-bottom: 20px;
         }
         #messages {
-            list-style-type: none;
-            flex: 1;
+            max-height: 300px;
             overflow-y: auto;
-            padding: 10px;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 5px;
+            border: 1px solid #ccc;
         }
         #messages li {
-            background: #f1f1f1;
+            margin: 5px;
             padding: 10px;
             border-radius: 5px;
-            margin: 5px 0;
+            background: #e9ecef;
         }
-        #message-form {
-            display: flex;
-            padding: 10px;
+        .form-control {
+            margin-bottom: 10px;
         }
-        #message {
-            flex: 1;
-            padding: 10px;
+        .btn {
+            width: 100%;
         }
-        button {
-            padding: 10px;
-        }
-        @media (max-width: 600px) {
-            input, button { width: 100%; }
+        .friend-item {
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div id="user-info">
-        <p id="user-email"></p>
-        <button id="logout">Выйти</button>
+    <div class="container mt-4">
+        <h1 class="text-center">Мессенджер</h1>
+        <div id="user-info" class="text-right mb-3">
+            <p id="user-email" class="d-inline"></p>
+            <button id="logout" class="btn btn-danger" style="display:none;">Выйти</button>
+        </div>
+        
+        <h2>Добавить друга</h2>
+        <form id="add-friend-form" class="mb-3">
+            <input type="email" id="friend-email" class="form-control" placeholder="Email друга" required />
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+        <ul id="friend-list" class="list-group mb-3"></ul>
+
+        <h2>Чат</h2>
+        <div id="chat-container" style="display:none;">
+            <ul id="messages" class="list-group"></ul>
+            <form id="message-form" class="mb-3">
+                <input id="message" class="form-control" placeholder="Введите сообщение..." required />
+                <button class="btn btn-primary" type="submit">Отправить</button>
+            </form>
+        </div>
+
+        <h2>Аутентификация</h2>
+        <form id="login-form" class="mb-3">
+            <input type="email" id="email" class="form-control" placeholder="Email" required />
+            <input type="password" id="password" class="form-control" placeholder="Пароль" required />
+            <button type="submit" class="btn btn-primary">Войти</button>
+        </form>
+        
+        <form id="register-form" class="mb-3">
+            <input type="email" id="reg-email" class="form-control" placeholder="Email" required />
+            <input type="password" id="reg-password" class="form-control" placeholder="Пароль" required />
+            <button type="submit" class="btn btn-success">Зарегистрироваться</button>
+        </form>
+
+        <h2>Аутентификация по номеру телефона</h2>
+        <form id="phone-form" class="mb-3">
+            <input type="tel" id="phone-number" class="form-control" placeholder="Введите номер телефона" required />
+            <button type="submit" class="btn btn-primary">Получить код</button>
+        </form>
+        <div id="recaptcha-container"></div>
+        <form id="verification-code-form" style="display:none;">
+            <input type="text" id="verification-code" class="form-control" placeholder="Введите код подтверждения" required />
+            <button type="submit" class="btn btn-success">Подтвердить</button>
+        </form>
     </div>
 
-    <h2>Чаты</h2>
-    <ul id="chat-list"></ul>
-    <form id="add-friend-form">
-        <input type="tel" id="friend-phone" placeholder="Введите номер телефона" required />
-        <button type="submit">Добавить друга</button>
-    </form>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+        import { getDatabase, ref, onChildAdded, push } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
-    <h2>Сообщения</h2>
-    <ul id="messages"></ul>
-    <form id="message-form">
-        <input id="message" autocomplete="off" placeholder="Введите сообщение..." required />
-        <button type="submit">Отправить</button>
-    </form>
+        // Конфигурация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCC3RzyblsZTeFM1Qy_60FZ6ZjdasfD2yQ",
+            authDomain: "adilwhyov.firebaseapp.com",
+            databaseURL: "https://adilwhyov-default-rtdb.firebaseio.com",
+            projectId: "adilwhyov",
+            storageBucket: "adilwhyov.appspot.com",
+            messagingSenderId: "780959026674",
+            appId: "1:780959026674:web:26c947984611ecde68af6b",
+            measurementId: "G-HZE48K1GBC"
+        };
 
-    <form id="login-form">
-        <input type="email" id="email" placeholder="Email" required />
-        <input type="password" id="password" placeholder="Пароль" required />
-        <button type="submit">Войти</button>
-    </form>
-    
-    <form id="register-form">
-        <input type="email" id="reg-email" placeholder="Email" required />
-        <input type="password" id="reg-password" placeholder="Пароль" required />
-        <button type="submit">Зарегистрироваться</button>
-    </form>
+        // Инициализация Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const database = getDatabase();
 
-    <h2>Аутентификация по номеру телефона</h2>
-    <form id="phone-form">
-        <input type="tel" id="phone-number" placeholder="Введите номер телефона" required />
-        <button type="submit">Получить код</button>
-    </form>
-    <div id="recaptcha-container"></div>
-    <form id="verification-code-form" style="display:none;">
-        <input type="text" id="verification-code" placeholder="Введите код подтверждения" required />
-        <button type="submit">Подтвердить</button>
-    </form>
+        const userEmail = document.getElementById('user-email');
+        const messageForm = document.getElementById('message-form');
+        const chatContainer = document.getElementById('chat-container');
+        const logoutButton = document.getElementById('logout');
+        const friendsRef = ref(database, 'friends');
+        const messagesRef = ref(database, 'messages');
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userEmail.textContent = `Вход: ${user.email || user.phoneNumber}`;
+                logoutButton.style.display = 'block';
+                loadFriends();
+            } else {
+                chatContainer.style.display = 'none';
+                userEmail.textContent = '';
+                logoutButton.style.display = 'none';
+            }
+        });
+
+        // Регистрация пользователя
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    alert("Регистрация успешна!");
+                })
+                .catch((error) => {
+                    alert("Ошибка регистрации: " + error.message);
+                });
+        });
+
+        // Вход пользователя
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    alert("Вход успешен!");
+                })
+                .catch((error) => {
+                    alert("Ошибка входа: " + error.message);
+                });
+        });
+
+        // Аутентификация по номеру телефона
+        document.getElementById('phone-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const phoneNumber = document.getElementById('phone-number').value;
+            const appVerifier = new RecaptchaVerifier('recaptcha-container', {}, auth);
+            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+                .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    document.getElementById('verification-code-form').style.display = 'block';
+                    document.getElementById('phone-form').style.display = 'none';
+                }).catch((error) => {
+                    alert("Ошибка при отправке кода: " + error.message);
+                });
+        });
+
+        document.getElementById('verification-code-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const code = document.getElementById('verification-code').value;
+            confirmationResult.confirm(code).then((result) => {
+                const user = result.user;
+                alert("Аутентификация успешна: " + user.phoneNumber);
+            }).catch((error) => {
+                alert("Ошибка при подтверждении кода: " + error.message);
+            });
+        });
+
+        logoutButton.addEventListener('click', () => {
+            signOut(auth)
+                .then(() => {
+                    alert("Вы вышли из учетной записи.");
+                });
+        });
+
+        // Добавление друга
+        document.getElementById('add-friend-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const friendEmail = document.getElementById('friend-email').value;
+            push(friendsRef, { email: friendEmail });
+            document.getElementById('friend-email').value = '';
+            loadFriends();
+        });
+
+        // Загрузка друзей
+        function loadFriends() {
+            const friendList = document.getElementById('friend-list');
+            friendList.innerHTML = '';
+            onChildAdded(friendsRef, (data) => {
+                const friend = data.val();
+                const li = document.createElement('li');
+                li.classList.add('list-group-item', 'friend-item');
+                li.textContent = friend.email;
+                li.onclick = () => startChat(friend.email);
+                friendList.appendChild(li);
+            });
+        }
+
+        // Начать чат с другом
+        function startChat(friendEmail) {
+            chatContainer.style.display = 'block';
+            // Здесь можно добавить код для загрузки истории сообщений с другом
+        }
+    </script>
 </body>
 </html>
