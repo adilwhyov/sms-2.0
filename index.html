@@ -88,7 +88,9 @@
     </div>
 
     <script type="module">
+        // Импорт необходимых функций из SDK Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-analytics.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
         import { getDatabase, ref, onChildAdded, push } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
@@ -106,6 +108,7 @@
 
         // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
         const auth = getAuth();
         const database = getDatabase();
 
@@ -150,6 +153,7 @@
             signInWithEmailAndPassword(auth, email, password)
                 .then(() => {
                     alert("Вход успешен!");
+                    chatContainer.style.display = 'block';
                 })
                 .catch((error) => {
                     alert("Ошибка входа: " + error.message);
@@ -177,6 +181,7 @@
             confirmationResult.confirm(code).then((result) => {
                 const user = result.user;
                 alert("Аутентификация успешна: " + user.phoneNumber);
+                chatContainer.style.display = 'block';
             }).catch((error) => {
                 alert("Ошибка при подтверждении кода: " + error.message);
             });
@@ -186,6 +191,7 @@
             signOut(auth)
                 .then(() => {
                     alert("Вы вышли из учетной записи.");
+                    chatContainer.style.display = 'none';
                 });
         });
 
@@ -201,7 +207,7 @@
         // Загрузка друзей
         function loadFriends() {
             const friendList = document.getElementById('friend-list');
-            friendList.innerHTML = '';
+            friendList.innerHTML = ''; // Очистить список друзей
             onChildAdded(friendsRef, (data) => {
                 const friend = data.val();
                 const li = document.createElement('li');
@@ -215,7 +221,31 @@
         // Начать чат с другом
         function startChat(friendEmail) {
             chatContainer.style.display = 'block';
-            // Здесь можно добавить код для загрузки истории сообщений с другом
+            loadMessages(friendEmail);
+        }
+
+        // Загрузка сообщений
+        function loadMessages(friendEmail) {
+            const messagesList = document.getElementById('messages');
+            messagesList.innerHTML = ''; // Очистить старые сообщения
+            onChildAdded(ref(database, 'messages/' + friendEmail), (data) => {
+                const message = data.val();
+                const li = document.createElement('li');
+                li.textContent = message;
+                messagesList.appendChild(li);
+            });
+
+            // Отправка сообщения
+            messageForm.onsubmit = (e) => {
+                e.preventDefault();
+                const messageInput = document.getElementById('message');
+                const message = messageInput.value;
+                const user = auth.currentUser;
+                if (user) {
+                    push(ref(database, 'messages/' + friendEmail), `${user.email || user.phoneNumber}: ${message}`);
+                    messageInput.value = '';
+                }
+            };
         }
     </script>
 </body>
