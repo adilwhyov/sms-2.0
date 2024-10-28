@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шахматы</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #board {
+            width: 400px;
+            margin: 20px;
+        }
+        #status {
+            font-size: 18px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #menu {
+            margin-left: 20px;
+        }
+        button {
+            margin: 5px;
+        }
+        select {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status"></div>
+    <div id="board" class="chessboard"></div>
+    <div id="menu">
+        <button id="startBtn">Начать игру заново</button>
+        <button id="clearBtn">Очистить доску</button>
+        <button id="nextMoveBtn">Ход соперника</button>
+        <label for="difficulty">Выбор сложности:</label>
+        <select id="difficulty">
+            <option value="easy">Легкий</option>
+            <option value="medium">Средний</option>
+            <option value="hard">Сложный</option>
+        </select>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
